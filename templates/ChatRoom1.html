@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Assignment</title>
+</head>
+<body>
+    <h1>Flask-SocketIO Chat Room 1</h1>
+    <ul id="messages">
+    </ul>
+    <form id="message-form">
+        <input type="text" id="author-input" placeholder="Your name" autocomplete="off">
+        <input type="text" id="message-input" placeholder="Your message" autocomplete="off">
+        <button type="submit">Send</button>
+    </form>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const form = document.getElementById('message-form');
+        const authorInput = document.getElementById('author-input');
+        const messageInput = document.getElementById('message-input');
+        const messages = document.getElementById('messages');
+    
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const author = authorInput.value.trim();
+            const message = messageInput.value.trim();
+            if (author !== '' && message !== '') {
+                socket.emit('message', { author, message });
+                messageInput.value = '';
+            }
+        });
+    
+        socket.on('message', function (data) {
+            const li = document.createElement('li');
+            li.textContent = `${data.author}: ${data.message}`;
+    
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Edit';
+            editButton.addEventListener('click', function () {
+                const newMessage = prompt('Edit your message:', data.message);
+                if (newMessage) {
+                    socket.emit('edit_message', { author: data.author, old_message: data.message, new_message: newMessage });
+                }
+            });
+    
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.addEventListener('click', function () {
+                socket.emit('delete_message', { author: data.author, message: data.message });
+            });
+    
+            li.appendChild(editButton);
+            li.appendChild(deleteButton);
+    
+            messages.appendChild(li);
+        });
+    
+        socket.on('edit_message', function (data) {
+            const items = Array.from(messages.children);
+            for (const li of items) {
+                if (li.textContent.startsWith(`${data.author}: ${data.old_message}`)) {
+                    li.firstChild.textContent = `${data.author}: ${data.new_message}`;
+                    break;
+                }
+            }
+        });
+    
+        socket.on('delete_message', function (data) {
+            const items = Array.from(messages.children);
+            for (const li of items) {
+                if (li.textContent.startsWith(`${data.author}: ${data.message}`)) {
+                    li.remove();
+                    break;
+                }
+            }
+        });
+    </script>
+    
+</body>
+</html>
